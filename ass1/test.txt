@@ -1,0 +1,3 @@
+send() returns the number of bytes actually sent out—this might be less than the number you told it to send! See, sometimes you tell it to send a whole gob of data and it just can't handle it. It'll fire off as much of the data as it can, and trust you to send the rest later. Remember, if the value returned by send() doesn't match the value in len, it's up to you to send the rest of the string. The good news is this: if the packet is small (less than 1K or so) it will probably manage to send the whole thing all in one go. Again, -1 is returned on error, and errno is set to the error number.
+
+The recv() call is similar in many respects
