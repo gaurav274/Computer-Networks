@@ -5,23 +5,28 @@
 #include <stdlib.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#define BUFFER_SIZE 1024
 int main(int argc, char const *argv[])
 {
 	struct addrinfo hints, *serverAddrInfo;
 	int status;
+	
 	if (argc !=3){
 		printf("Error: ip addr + port required");
 		exit(1);
 	}
+	// Standard stuff
 	memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET; 
     hints.ai_socktype = SOCK_STREAM;
     
+    // get address info of the server
     if (getaddrinfo(argv[1],argv[2], &hints, &serverAddrInfo) != 0) {
         perror("Error: Failed to get server addr: %s\n");
         exit(1);
     }
-    
+
+    // socket handle for client
     int socketHandle = socket(serverAddrInfo->ai_family, serverAddrInfo->ai_socktype, serverAddrInfo->ai_protocol);
     
     if (socketHandle<0){
@@ -29,62 +34,87 @@ int main(int argc, char const *argv[])
 		exit(1);
 	}
 	
+	// connect with the server
 	if(connect(socketHandle,serverAddrInfo->ai_addr,serverAddrInfo->ai_addrlen)<0){
 		perror("Error: Failed connecting to socket!!!\n");
 		exit(1);
 	}
+
 	freeaddrinfo(serverAddrInfo);
 	
 
 
-	char buffer[1024];
+	char buffer[BUFFER_SIZE];
 	bzero(buffer,sizeof(buffer));
+	
+	// get the file descriptor for sending and receiving
 	FILE *request = fdopen(socketHandle, "ab+");
 	
-	fread(buffer,1,sizeof(buffer),request);
-	// recv(socketHandle, buffer, 1024, 0);
-  	fwrite(buffer,1,sizeof(buffer),stdout);
-  	printf("%d\n", socketHandle);
+	// Reading the welcome message
+	if(fread(buffer,1,sizeof(buffer),request)!=BUFFER_SIZE){
+		perror("Error: Could not recieve welcome message!!!");
+		exit(1);
+	}
+
+	fwrite(buffer,1,sizeof(buffer),stdout);
+  
   	int bytesRec;
+
+  	// Request files
   	while(1){
-  		printf("goj\n");
-  		char filename[1024];
+  		
+  		// Read the filename from the stdin
+  		char filename[BUFFER_SIZE];
   		bzero(filename,sizeof(filename));
   		scanf("%s",filename);
-  		printf("%s\n",filename );
-  		// if (send(socketHandle,filename,sizeof(filename),0)<0){
-  		if (fwrite(filename,1,sizeof(filename),request)<0){
+  		
+  		// Sending the filename
+  		if (fwrite(filename,1,sizeof(filename),request)!=BUFFER_SIZE){
 			perror("Error: Sending filename failed!!!");
 			exit(1);
 		}
 		
-		char header[1024];
+		//Receiving the file size in the header
+		char header[BUFFER_SIZE];
 		bzero(header,sizeof(header));
-		// int fileSize = recv(socketHandle,header,sizeof(header),0);
-		int fileSize = fread(header,1,sizeof(header),request);
-		printf("hdkhk%s\n",header);
-		
+		if(fread(header,1,sizeof(header),request)!=BUFFER_SIZE){
+			perror("Error: Could not recieve header!!!");
+			exit(1);
+		}
 		int sz = atoi(header);
-		printf("%d\n",sz );
 		
-		int count = sz ;
+		int remainingSize = sz ;
 		bzero(buffer,sizeof(buffer));
-		// bytesRec = recv(socketHandle, buffer, sizeof(buffer), 0);
-		// printf("fuc%s\n", buffer);
-		// while ((bytesRec = recv(socketHandle, buffer, sizeof(buffer), 0))>0){
-			 while ((bytesRec = fread(buffer,1,sizeof(buffer),request))>0){
-			printf("Printing------>%d\n",bytesRec );
-			// printf("%s\n",buffer);
-			if (count<bytesRec){
-				fwrite(buffer, 1, count, stdout);	
+		
+		// Receiving the file data
+		// remainingSize stores the number of bytes yet to be received
+		while ((fread(buffer,1,sizeof(buffer),request))>0){
+
+			// if error occurs close connection and shut down client
+			if(ferror(request)) { printf("Fatal Error!!!"); close(socketHandle); exit(1);} 
+			
+			// Last buffer as the remaining bytes is less than BUFFERSIZE
+			if (remainingSize<BUFFER_SIZE){
+				fwrite(buffer, 1, remainingSize, stdout);	
 				break;
 			}
+			
+			//print to the stdout
 			fwrite(buffer, 1, sizeof(buffer), stdout);
-			count-=bytesRec;
-			printf("left->>>>>>%d\n",count );
+			remainingSize -= BUFFER_SIZE;
 			bzero(buffer,sizeof(buffer));
-			if (count<0) break;
+			// break if remaining bytes are <0
+			if (remainingSize<0) break;
 			}
+
+		// Capuring next file message and printing to screen
+		bzero(buffer,sizeof(buffer));
+		if(fread(buffer,1,sizeof(buffer),request)!=BUFFER_SIZE){
+			perror("Error: Could not recieve welcome message!!!");
+			exit(1);
+		}
+		fwrite(buffer,1,sizeof(buffer),stdout);
+  
   	}
 	return 0;
 }
