@@ -8,7 +8,7 @@
 #define BACKLOG 15
 
 
-void transferFile(int newHandle,char *filename,FILE *request){
+void transferFile(int newHandle,char *filename,FILE*request){
 	char buffer[1024];
 	char header[1024];
 	char msg[1024];
@@ -20,8 +20,10 @@ void transferFile(int newHandle,char *filename,FILE *request){
 			FILE * fp;
 			if( (fp = fopen(filename,"r"))==NULL){
 				sprintf(header, "%d", strlen(msg));
-				send(newHandle,header,sizeof(header),0);
-				send(newHandle,msg,sizeof(msg),0);
+				// send(newHandle,header,sizeof(header),0);
+				// send(newHandle,msg,sizeof(msg),0);
+				fwrite(header,1,sizeof(header),request);
+				fwrite(msg,1,sizeof(msg),request);
 				return;
 			}
 			else{
@@ -29,16 +31,19 @@ void transferFile(int newHandle,char *filename,FILE *request){
 				int sz = ftell(fp);
 				sprintf(header, "%d", sz);
 				// tostring(header, sz);
-				send(newHandle,header,sizeof(header),0);
+				// send(newHandle,header,sizeof(header),0);
+				fwrite(header,1,sizeof(header),request);
 				fseek(fp, 0L, SEEK_SET);
 				while((bytesRead=fread(buffer,1,sizeof(buffer),fp))>0){
 					printf("%d\n",bytesRead);
-					if (send(newHandle,buffer,sizeof(buffer),0)<0){
-					// if (fwrite(buffer,1,sizeof(buffer),request)<0){
+					printf("%s\n",buffer );
+					// if (send(newHandle,buffer,sizeof(buffer),0)<0){
+					if (fwrite(buffer,1,sizeof(buffer),request)<0){
 					perror("Error: Send Failed!!!");
 					return;
 					}
 					printf("%d\n",bytesRead);
+					usleep(10000);
 					bzero(buffer,sizeof(buffer));
 				}
 				return;
@@ -76,21 +81,27 @@ int main(int argc,char *argv[])
 			perror("Error: Couldn't accept request from client");
 			exit(1);
 		}
+		FILE *request = fdopen(newHandle, "ab+");
+		printf("NewJHA%d\n",newHandle );
 		char msg[1024];
 		bzero(msg,sizeof(msg));
 		strcpy(msg,"Welcome to library.Please give a file name!!!");
-		if (send(newHandle,msg,sizeof(msg),0)<0){
+		// if (send(newHandle,msg,sizeof(msg),0)<0){
+		if (fwrite(msg,1,sizeof(msg),request)<0){
 			perror("Error: Send Failed!!!");
 			exit(1);
 		}
 		while(1){
 			char filename[1024];
 			bzero(filename,sizeof(filename));
-			FILE *request = fdopen(newHandle, "r");
+			
 			if (fread(filename,1,sizeof(filename),request)<=0){
 				perror("Error: Could not recieve!!!");
 				break;
 			}
+			// int f =write(newHandle,filename,sizeof(filename));
+			//int f =fwrite(filename,1,sizeof(filename),request);
+			// printf("fuck%d\n",f );
 			printf("%s\n",filename);
 			transferFile(newHandle,filename,request);	
 			printf("%s\n",filename);

@@ -39,12 +39,12 @@ int main(int argc, char const *argv[])
 
 	char buffer[1024];
 	bzero(buffer,sizeof(buffer));
-	FILE *request = fdopen(socketHandle, "r");
+	FILE *request = fdopen(socketHandle, "ab+");
 	
 	fread(buffer,1,sizeof(buffer),request);
 	// recv(socketHandle, buffer, 1024, 0);
   	fwrite(buffer,1,sizeof(buffer),stdout);
-
+  	printf("%d\n", socketHandle);
   	int bytesRec;
   	while(1){
   		printf("goj\n");
@@ -52,7 +52,8 @@ int main(int argc, char const *argv[])
   		bzero(filename,sizeof(filename));
   		scanf("%s",filename);
   		printf("%s\n",filename );
-  		if (send(socketHandle,filename,sizeof(filename),0)<0){
+  		// if (send(socketHandle,filename,sizeof(filename),0)<0){
+  		if (fwrite(filename,1,sizeof(filename),request)<0){
 			perror("Error: Sending filename failed!!!");
 			exit(1);
 		}
@@ -62,6 +63,7 @@ int main(int argc, char const *argv[])
 		// int fileSize = recv(socketHandle,header,sizeof(header),0);
 		int fileSize = fread(header,1,sizeof(header),request);
 		printf("hdkhk%s\n",header);
+		
 		int sz = atoi(header);
 		printf("%d\n",sz );
 		
@@ -73,8 +75,11 @@ int main(int argc, char const *argv[])
 			 while ((bytesRec = fread(buffer,1,sizeof(buffer),request))>0){
 			printf("Printing------>%d\n",bytesRec );
 			// printf("%s\n",buffer);
+			if (count<bytesRec){
+				fwrite(buffer, 1, count, stdout);	
+				break;
+			}
 			fwrite(buffer, 1, sizeof(buffer), stdout);
-			
 			count-=bytesRec;
 			printf("left->>>>>>%d\n",count );
 			bzero(buffer,sizeof(buffer));
