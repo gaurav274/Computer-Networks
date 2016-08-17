@@ -1,0 +1,62 @@
+<HTML>
+<HEAD>
+<TITLE>ECE 4564 Project 2 POST Test</TITLE>
+</HEAD>
+<BODY TEXT="#000000" LINK="#0000FF" VLINK="#8000FF" ALINK="FF0000" BGCOLOR="#FFFFFF">
+<CENTER>
+<B><FONT SIZE=+1>ECE 4564
+<BR>Network Application Design</FONT></B>
+
+<H2>Project 2 Test Page for POST Method</H2>
+<HR NOSHADE SIZE=2>
+</CENTER>
+
+
+<P>
+Use this page to test optional support for the POST method.  Fill out the following form and press
+the &quot;Submit Query&quot; button button below.  Your server will receive a POST request and should save
+the information in the file <TT>post_test_file.txt</TT> in the base directory for your web server.
+<P>
+Note that <TT>/post_test_file.txt</TT> is the Request-URI that will be provided with the POST request.  Your
+server must <B>not</B> hard-code this file name.  Instead, the server should save the posted data to the
+file specified in the Request-URI that comes with the POST request.
+<P>
+<HR NOSHADE SIZE=1>
+<FORM METHOD="POST" action="post_test_file.txt">
+<P>
+Enter some text here:
+<BR>
+<INPUT TYPE="text" SIZE="20" NAME="TextEntry_1">
+<P>
+Update and enter more text here:
+<BR>
+<TEXTAREA ROWS="4" COLS="40" NAME="TextEntry_2">
+This is some text for testing the POST method.
+</TEXTAREA>
+<P>
+Select an item below:
+<BR>
+<INPUT TYPE="radio" Name="Item" VALUE="Item_1" CHECKED>Item 1
+<BR>
+<INPUT TYPE="radio" Name="Item" VALUE="Item_2">Item 2
+<BR>
+<INPUT TYPE="radio" Name="Item" VALUE="Item_3">Item 3
+<P>
+<INPUT TYPE="Submit">
+</FORM>
+
+
+
+<P>
+<HR NOSHADE SIZE=2>
+<CENTER>
+<A HREF="index.html">Return to Index Page</A>
+</CENTER>
+<HR NOSHADE SIZE=2>
+<FONT SIZE=-1>
+<CITE>
+<BR>Last updated:  September 26, 2002
+</CITE>
+</FONT SIZE=-1>
+</BODY>
+</HTML>
