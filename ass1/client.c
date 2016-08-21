@@ -12,7 +12,7 @@ int main(int argc, char const *argv[])
 	int status;
 	
 	if (argc !=3){
-		printf("Error: ip addr + port required");
+		printf("Error: ip port required\n");
 		exit(1);
 	}
 	// Standard stuff
@@ -30,16 +30,16 @@ int main(int argc, char const *argv[])
     int socketHandle = socket(serverAddrInfo->ai_family, serverAddrInfo->ai_socktype, serverAddrInfo->ai_protocol);
     
     if (socketHandle<0){
-		perror("Error: Could not get socket handle!!!\n");
+		perror("Error: Could not get socket handle!!!");
 		exit(1);
 	}
 	
 	// connect with the server
 	if(connect(socketHandle,serverAddrInfo->ai_addr,serverAddrInfo->ai_addrlen)<0){
-		perror("Error: Failed connecting to socket!!!\n");
+		perror("Error: Failed connecting to socket!!!");
 		exit(1);
 	}
-
+	printf("successfully Connected\nWait for server to responding....\n");
 	freeaddrinfo(serverAddrInfo);
 	
 
@@ -58,7 +58,6 @@ int main(int argc, char const *argv[])
 
 	fwrite(buffer,1,sizeof(buffer),stdout);
   
-  	int bytesRec;
 
   	// Request files
   	while(1){
@@ -77,7 +76,18 @@ int main(int argc, char const *argv[])
 		//Receiving the file size in the header
 		char header[BUFFER_SIZE];
 		bzero(header,sizeof(header));
-		if(fread(header,1,sizeof(header),request)!=BUFFER_SIZE){
+		
+		// status is used to capture if the server is lost...
+		// if header is read successfully as of zero bytes that means server is lost
+		int status;
+		if((status=fread(header,1,sizeof(header),request))!=BUFFER_SIZE){
+			// server lost
+			if (status == 0){
+				close(socketHandle);
+				close(request);
+				printf("Error:Could not recieve header!!! : Connection reset by peer\n");
+				exit(1);
+			} 
 			perror("Error: Could not recieve header!!!");
 			exit(1);
 		}
