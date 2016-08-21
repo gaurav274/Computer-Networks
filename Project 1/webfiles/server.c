@@ -2,7 +2,7 @@
 * @Author: gaurav
 * @Date:   2016-08-13 21:50:53
 * @Last Modified by:   gaurav
-* @Last Modified time: 2016-08-19 05:29:52
+* @Last Modified time: 2016-08-19 20:35:17
 */
 
 #include <stdio.h>
@@ -54,6 +54,7 @@ void sendStatusMessage(int socket, char* protocol,int status, char *reason, char
   return;
 }
 
+// Returns the content type
 char* getContentType(char* filename){
 	if(strstr(filename,".pdf")){
 		return "Application/pdf";
@@ -75,6 +76,7 @@ char* getContentType(char* filename){
 	}
 }
 
+// Helps to return the directory
 void showDir(char *filepath,int newHandle,char *protocol,char* connectionType,char *uri){
 	DIR *dir;
 	char directory[5*BUFFER_SIZE];
@@ -93,11 +95,9 @@ void showDir(char *filepath,int newHandle,char *protocol,char* connectionType,ch
 		bzero(tmp,sizeof(tmp));
 		bzero(res,sizeof(res));
 		strcpy(res,uri);
-		strcat(res,"/");
-		printf("RES%s\n", res);
-		printf("%s\n", ent->d_name);
+		if (uri[strlen(uri)-1]!='/')
+			strcat(res,"/");
 		sprintf(tmp,"<a class=\"icon file \"  href=\"%s\">%s</a><br/>",strcat(res,ent->d_name),ent->d_name);
-	  	printf("%s\n",tmp);
 	  	if (strlen(directory)+strlen(ent->d_name)<5*BUFFER_SIZE){
 	  		strcat(directory,tmp);
 	  	}
@@ -108,7 +108,6 @@ void showDir(char *filepath,int newHandle,char *protocol,char* connectionType,ch
 			exit(1);
 	  	}
 	  }
-	  printf("%s\n",directory );
 	  closedir (dir);
 	} 
 	else {
@@ -116,7 +115,7 @@ void showDir(char *filepath,int newHandle,char *protocol,char* connectionType,ch
 	  sendStatusMessage(newHandle, protocol,404,"Not Found",badFile);
 	  return;
 	}
-	printf("%s\n",directory);
+	
 	sendStatusMessage(newHandle,protocol,200,"OK",okMessage);
 	time_t now = time(NULL);
   	char date[200];
@@ -132,6 +131,8 @@ void showDir(char *filepath,int newHandle,char *protocol,char* connectionType,ch
 		}
 	return;	
 }
+
+
 void handleGet(int newHandle,char* uri,char* protocol,char * connectionType,char *root){
 	//printf("%s\n",uri );
 	char filepath[5*BUFFER_SIZE];
@@ -141,20 +142,28 @@ void handleGet(int newHandle,char* uri,char* protocol,char * connectionType,char
 	
 	// getting file path to send
 	strcpy(&filepath[strlen(filepath)],uri);
-	printf("FILEBEFORE%s\n",filepath );
+
 	if (isDirectory(filepath)){
-		// show index.html
+		// show index.html if exist
 		if (filepath[strlen(filepath)-1]=='/')
+			strcat(filepath,"index.html");
+		else
 			strcat(filepath,"/index.html");
+
+		
+		// no index.html exists thus list directory
+		if (fopen(filepath,"r")==NULL){
 		// show directory
-		else{
+			memcpy( filepath, &filepath, strlen(filepath)-11 );
+			filepath[strlen(filepath)-11] ='\0';
+			
 			showDir(filepath,newHandle, protocol,connectionType,uri);
 			return;
 		}
-		printf("URI-->%s\n", filepath);
+		
 	}
 	
-	printf("FILE%sROOT%s\n",filepath,root );
+	
 	if((fp = fopen(filepath,"r"))==NULL){
 		// file not found error
 		sendStatusMessage(newHandle, protocol,404,"Not Found",badFile);
@@ -199,12 +208,13 @@ void handleGet(int newHandle,char* uri,char* protocol,char * connectionType,char
 	}
 }
 
+
 void handleRequest(int newHandle,char * root){
 	// persistent connection
 	// connection =1 if keep-alive else connection=0
 	int connection = 1;
 	while(1){
-		printf("START\n%d",getpid());
+		
 		int bytesRead;
 		// by default assumed to be http1.1
 		char *protocol = "HTTP/1.1";
@@ -283,11 +293,10 @@ void handleRequest(int newHandle,char * root){
 				if (tmp) 
 					strncpy(connectionType, start, end-start);
 			}
-			printf("%s\n",request );
-			printf("connectionType %s\n", connectionType);
+			
 			// close connection checking
 			if (!strcmp(connectionType,"close"))
-				printf("CONNE%s\n",connectionType );
+				
 				connection = 0;
 
 			// request not GET, reject
@@ -317,10 +326,10 @@ int main(int argc, char **argv ) {
 	char * root = getenv("PWD");
 	char c; 
 	//Parsing the command line arguments
-    while ((c = getopt (argc, argv, "p:r:")) != -1)
+    while ((c = getopt (argc, argv, "p:d:")) != -1)
         switch (c)
         {
-            case 'r':
+            case 'd':
                 root = malloc(strlen(optarg));
                 strcpy(root,optarg);
                 break;
@@ -328,7 +337,7 @@ int main(int argc, char **argv ) {
                 port = strtol(optarg, NULL, 0);
                 break;
             case '?':
-                fprintf(stderr,"Wrong arguments given!!!\n");
+                printf("Bad arguments given!!! Sorry try again\n");
                 exit(1);
             default:
                 exit(1);
@@ -376,22 +385,21 @@ int main(int argc, char **argv ) {
 			
 			
 		    handleRequest(newHandle,root);
-			printf("SUCCESS EXIT\n");
+			//printf("SUCCESS EXIT\n");
 			
 			//close the new socket
-			//shutdown (newHandle, SHUT_RDWR);
 			close(newHandle);
 			exit(0);
 			}
 		else if(child!=0) {
 			//parent thread
 			// parent thread doesnot need the new socket as child handles it
-			//close(newHandle);
+			close(newHandle);
 		}
 		else{
 			//error occured
 			perror("Error: Fork failed");
-			//exit(1); 
+			exit(1); 
 		}
 
 	}
